@@ -29,8 +29,36 @@ public class SelectCommand<K> extends Command {
   private boolean m_runsWhenDisabled = true;
   private InterruptionBehavior m_interruptBehavior = InterruptionBehavior.kCancelIncoming;
 
-  private final Command m_defaultCommand =
-      new PrintCommand("SelectCommand selector value does not correspond to any command!");
+  private final Command m_defaultCommand;
+
+  /**
+   * Creates a new SelectCommand.
+   *
+   * @param commands the map of commands to choose from
+   * @param selector the selector to determine which command to run
+   * @param defaultCommand the command to run if the selector doesn't return a value in the map
+   */
+  @SuppressWarnings("this-escape")
+  public SelectCommand(
+      Map<K, Command> commands, Supplier<? extends K> selector, Command defaultCommand) {
+    m_commands = requireNonNullParam(commands, "commands", "SelectCommand");
+    m_selector = requireNonNullParam(selector, "selector", "SelectCommand");
+    m_defaultCommand = requireNonNullParam(defaultCommand, "defaultCommand", "selectCommand");
+
+    CommandScheduler.getInstance().registerComposedCommands(m_defaultCommand);
+    CommandScheduler.getInstance()
+        .registerComposedCommands(commands.values().toArray(new Command[] {}));
+
+    addRequirements(m_defaultCommand.getRequirements());
+
+    for (Command command : m_commands.values()) {
+      addRequirements(command.getRequirements());
+      m_runsWhenDisabled &= command.runsWhenDisabled();
+      if (command.getInterruptionBehavior() == InterruptionBehavior.kCancelSelf) {
+        m_interruptBehavior = InterruptionBehavior.kCancelSelf;
+      }
+    }
+  }
 
   /**
    * Creates a new SelectCommand.
@@ -40,20 +68,10 @@ public class SelectCommand<K> extends Command {
    */
   @SuppressWarnings("this-escape")
   public SelectCommand(Map<K, Command> commands, Supplier<? extends K> selector) {
-    m_commands = requireNonNullParam(commands, "commands", "SelectCommand");
-    m_selector = requireNonNullParam(selector, "selector", "SelectCommand");
-
-    CommandScheduler.getInstance().registerComposedCommands(m_defaultCommand);
-    CommandScheduler.getInstance()
-        .registerComposedCommands(commands.values().toArray(new Command[] {}));
-
-    for (Command command : m_commands.values()) {
-      addRequirements(command.getRequirements());
-      m_runsWhenDisabled &= command.runsWhenDisabled();
-      if (command.getInterruptionBehavior() == InterruptionBehavior.kCancelSelf) {
-        m_interruptBehavior = InterruptionBehavior.kCancelSelf;
-      }
-    }
+    this(
+        commands,
+        selector,
+        new PrintCommand("SelectCommand selector value does not correspond to any command!"));
   }
 
   @Override

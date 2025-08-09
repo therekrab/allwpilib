@@ -172,6 +172,21 @@ public final class Commands {
    * @param <K> The type of key used to select the command
    * @param selector the selector function
    * @param commands map of commands to select from
+   * @param defaultCommand default command to run if the selector doesn't return a key in the map
+   * @return the command
+   * @see SelectCommand
+   */
+  public static <K> Command select(
+      Map<K, Command> commands, Supplier<? extends K> selector, Command defaultCommand) {
+    return new SelectCommand<>(commands, selector, defaultCommand);
+  }
+
+  /**
+   * Runs one of several commands, based on the selector function.
+   *
+   * @param <K> The type of key used to select the command
+   * @param selector the selector function
+   * @param commands map of commands to select from
    * @return the command
    * @see SelectCommand
    */
